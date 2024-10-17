@@ -1,0 +1,222 @@
+---
+output:
+  
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+        
+  pdf_document:
+    
+    fig_caption: true
+    fig_crop: false
+  word_document: default
+params:
+    printcode: false
+---
+---
+title: "assignment 5"
+author: "lokeshwaran"
+date: "2024-09-25"
+output: html_document
+---
+
+```{r}
+library(ISLR)
+library(MASS)
+library(class)
+library(boot)
+library(glmnet)
+library(leaps)
+library(boot)
+library(pls)
+```
+
+```{r}
+weekly=Weekly
+college=College
+boston=Boston
+auto=Auto
+carseat=Carseats
+```
+
+
+11) We will now try to predict per capita crime rate in the Boston data set.
+
+a) Try out some of the regression methods explored in this chapter,such as best subset selection, the lasso, ridge regression, and PCR. Present and discuss results for the approaches that you consider.
+
+```{r}
+fit_lm_3=lm(crim~.,data = boston)
+summary(fit_lm_3)
+```
+    From this model, the variable zn,dis,rad,black,medv are having relationship with response.
+
+```{r}
+subset_1=regsubsets(crim~.,data = boston,nvmax = 13)
+subset_1_summary<-summary(subset_1)
+subset_1_summary$adjr2
+```
+```{r}
+par(mfrow=c(1,3))
+plot(subset_1_summary$cp,xlab = "Number of variable",ylab="C_p",type = "l")
+
+points(which.min(subset_1_summary$cp),subset_1_summary$cp[which.min(subset_1_summary$cp)],col="blue",cex=3,pch=20)
+
+plot(subset_1_summary$bic,xlab = "Number of variable",ylab="BIC",type = "l")
+
+points(which.min(subset_1_summary$bic),subset_1_summary$bic[which.min(subset_1_summary$bic)],col="blue",cex=3,pch=20)
+
+plot(subset_1_summary$adjr2,xlab = "Number of variable",ylab="adjr2",type = "l")
+
+points(which.max(subset_1_summary$adjr2),subset_1_summary$adjr2[which.max(subset_1_summary$adjr2)],col="blue",cex=3,pch=20)
+```
+```{r}
+coef(subset_1,which.min(subset_1_summary$cp))
+```
+```{r}
+forwd_subset=regsubsets(crim~.,data = boston,nvmax = 13,method="forward")
+
+forwd_subset_summary<-summary(forwd_subset)
+forwd_subset_summary$adjr2
+```
+```{r}
+par(mfrow=c(1,3))
+
+plot(forwd_subset_summary$cp,xlab = "Number of variables",ylab = "C_p",type = "l")
+
+points(which.min(forwd_subset_summary$cp),forwd_subset_summary$cp[which.min(forwd_subset_summary$cp)],col="red",cex=2,pch=20)
+
+plot(forwd_subset_summary$bic,xlab = "Number of variables",ylab = "bic",type = "l")
+
+points(which.min(forwd_subset_summary$bic),forwd_subset_summary$bic[which.min(forwd_subset_summary$bic)],col="red",cex=2,pch=20)
+
+plot(forwd_subset_summary$adjr2,xlab = "Number of variables",ylab = "adjr2",type = "l")
+
+points(which.max(forwd_subset_summary$adjr2),forwd_subset_summary$adjr2[which.max(forwd_subset_summary$adjr2)],col="red",cex=2,pch=20)
+```
+```{r}
+coef(forwd_subset,which.min(forwd_subset_summary$cp))
+```
+```{r}
+backwd_subset=regsubsets(crim~.,data = boston,nvmax = 13,method="backward")
+backwd_subset_summary<-summary(backwd_subset)
+backwd_subset_summary$outmat
+```
+```{r}
+par(mfrow=c(1,3))
+
+plot(backwd_subset_summary$cp,xlab = "Number of variables",ylab = "c_p",type = "l")
+
+points(which.min(backwd_subset_summary$cp),backwd_subset_summary$cp[which.min(backwd_subset_summary$cp)],col="green",cex=3,pch=20)
+
+plot(backwd_subset_summary$bic,xlab = "Number of variables",ylab = "BIC",type = "l")
+
+points(which.min(backwd_subset_summary$bic),backwd_subset_summary$bic[which.min(backwd_subset_summary$bic)],col="green",cex=3,pch=20)
+
+plot(backwd_subset_summary$adjr2,xlab = "Number of variables",ylab = "adjr2",type = "l")
+
+points(which.max(backwd_subset_summary$adjr2),backwd_subset_summary$adjr2[which.max(backwd_subset_summary$adjr2)],col="green",cex=3,pch=20)
+```
+```{r}
+coef(backwd_subset,which.max(backwd_subset_summary$adjr2))
+```
+```{r}
+set.seed(8)
+boston_matrix_crim<-model.matrix(crim~.,data = boston)[,-1]
+```
+
+```{r}
+ridge_2=cv.glmnet(boston_matrix_crim,boston$crim,alpha=0)
+ridge_lam_2<-ridge_2$lambda.min
+ridge_lam_2
+```
+```{r}
+coef(ridge_2,s=ridge_lam_2)
+```
+```{r}
+set.seed(22)
+lasso_2=cv.glmnet(boston_matrix_crim,boston$crim,alpha=1)
+lasso_lam_2<-lasso_2$lambda.min
+lasso_lam_2
+```
+```{r}
+coef(lasso_2,s=lasso_lam_2)
+```
+```{r}
+set.seed(11)
+pcr_2=pcr(crim~.,data=boston,scale=TRUE,validation="CV")
+pcr_2_summary<- summary(pcr_2)
+pcr_2_summary
+```
+```{r}
+validationplot(pcr_2,val.type = "MSEP")
+```
+```{r}
+loadingspcr_2<-pcr_2$loadings[,1:8]
+loadingspcr_2
+```
+```{r}
+set.seed(32)
+plsr_2=plsr(crim~.,data=boston,scale=TRUE,validation="CV")
+plsr_2_summary<- summary(plsr_2)
+plsr_2_summary
+```
+
+```{r}
+validationplot(plsr_2,val.type = "MSEP")
+```
+```{r}
+loadingsplsr_2=plsr_2$loadings[,1:2]
+loadingsplsr_2
+```
+b) Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are
+evaluating model performance using validation set error, crossvalidation, or some other reasonable alternative, as opposed to
+using training error.
+
+```{r}
+boston_train=sample(nrow(boston),nrow(boston)*0.70)
+```
+
+```{r}
+boston_tr=boston[boston_train,]
+```
+```{r}
+boston_test=boston[-boston_train,]
+```
+
+```{r}
+set.seed(42)
+boston_train_matrix=model.matrix(crim~.,data = boston_tr)[,-1]
+boston_test_matrix=model.matrix(crim~.,data = boston_test)[,-1]
+```
+
+```{r}
+ridge_3=cv.glmnet(boston_train_matrix,boston_tr$crim,alpha=0)
+ridge_lam_3=ridge_3$lambda.min
+```
+
+```{r}
+pred_ridge_3=predict(ridge_3,s=ridge_lam_3,newx =boston_test_matrix)
+test_error_3=mean((boston_test$crim- pred_ridge_3)^2)
+```
+```{r}
+rmse_ridge_3= sqrt(test_error_3)
+(rmse_ridge_3/mean(boston_test$crim))*100
+```
+```{r}
+lasso_3=cv.glmnet(boston_train_matrix,boston_tr$crim,alpha=1)
+lasso_lam_3=lasso_3$lambda.min
+```
+```{r}
+pred_lasso_3=predict(lasso_3,s=lasso_lam_3,newx = boston_test_matrix)
+test_error_boston=mean((boston_test$crim - pred_lasso_3)^2)
+```
+```{r}
+rmse_lasso_3= sqrt(test_error_3)
+(rmse_lasso_3/mean(boston_test$crim))*100
+```
+c) Does your chosen model involve all of the features in the data set? Why or why not?
+  
+    The chosen model does not involve all of the features in the data set, because some of them are not statistically significant to response.
+
